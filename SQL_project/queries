@@ -1,0 +1,191 @@
+SELECT productname, price, cost, stockquantity
+FROM products
+WHERE price > 30000 AND
+	  stockquantity < 50
+ORDER BY price DESC;
+
+          
+SELECT customername, city, region, gender, registrationdate
+FROM customers
+WHERE registrationdate BETWEEN '2025-01-01' AND '2025-12-31';
+
+
+SELECT productid, productname, price, supplierid
+FROM products
+WHERE productname LIKE '%Phone%';
+
+
+SELECT DISTINCT paymentmethod, COUNT(*) AS totalnumberoforders
+FROM orders
+GROUP BY paymentmethod;
+
+
+SELECT productname, price, cost,
+(price - cost) AS profitperunit,
+ROUND(((price - cost) / price) * 100, 2) AS profitmarginpercentage
+FROM products
+ORDER BY profitmarginpercentage DESC;
+
+
+SELECT orderdate, COUNT(*) AS totalnumberoforders
+FROM orders
+GROUP BY orderdate
+ORDER BY totalnumberoforders DESC;
+
+
+SELECT p.productname, SUM(o.quantity) AS totalquantitysold, COUNT(*) AS numberofdifferentorders
+FROM products AS p
+JOIN order_items AS o
+ON p.productid = o.productid
+GROUP BY p.productname
+ORDER BY numberofdifferentorders DESC;
+
+
+SELECT s.suppliername, s.city, p.productname, p.price, p.productstatus
+FROM suppliers AS s
+LEFT JOIN products AS p
+ON s.supplierid = p.supplierid;
+
+
+SELECT DISTINCT o.orderstatus, COUNT(*) AS numberoforders, SUM(oi.quantity) AS totalnumberoforders,
+ROUND((COUNT(*) / SUM(oi.quantity)) * 100, 2) AS percentageoftotalorders
+FROM orders AS o
+JOIN order_items AS  oi
+ON o.orderid = oi.orderid
+GROUP BY o.orderstatus;
+
+
+SELECT o.customerid, c.customername, 
+COUNT(DISTINCT cat.categoryid) AS numberofdifferentcategories,
+ SUM(oi.quantity) AS totalquantity
+FROM customers AS c
+JOIN orders AS o
+ON c.customerid = o.customerid
+JOIN order_items AS oi
+ON o.orderid = oi.orderid
+JOIN products AS p
+ON oi.productid = p.productid
+JOIN categories AS cat
+ON p.categoryid = cat.categoryid
+GROUP BY o.customerid, c.customername
+HAVING COUNT(DISTINCT cat.categoryid) >= 3;
+
+
+SELECT productname, stockquantity, cost AS costprice, price AS sellingprice,
+(cost * stockquantity) AS totalstockvalue,
+(price * stockquantity) AS potentialstockvalue
+FROM products;
+
+
+SELECT c.customername, 
+COUNT(*) AS totalnumberoforders, 
+COUNT(DISTINCT o.orderdate) AS numberofdifferentorderdates,
+MIN(o.orderdate) AS earliestorderdate,
+MAX(o.orderdate) AS mostrecentorderdate
+FROM customers AS c
+JOIN orders AS o
+ON c.customerid = o.customerid
+GROUP BY c.customername, c.customerid
+HAVING  COUNT(DISTINCT o.orderdate) >= 3;
+
+
+SELECT s.suppliername, COUNT(DISTINCT P.productid) AS numberofproductssupplied, 
+SUM(o.quantity) AS totalquantityofproductsold,
+SUM(o.quantity * o.unitprice) AS totalrevenue
+FROM suppliers AS s
+JOIN products AS p
+ON s.supplierid = p.supplierid
+JOIN order_items AS o
+ON p.productid = o.productid
+GROUP BY s.suppliername, s.supplierid
+HAVING SUM(quantity * unitprice) > 100000;
+
+
+SELECT ROUND(AVG(price - cost), 2)
+FROM products;
+
+SELECT productname, price AS sellingprice, cost AS costprice,
+(price - cost) AS profitperunit
+FROM products
+WHERE (price - cost) > (SELECT ROUND(AVG(price - cost), 2)
+FROM products);
+
+
+SELECT COUNT(DISTINCT paymentmethod) AS numberofpaymentmethod
+FROM orders;
+
+SELECT c.customername, COUNT(DISTINCT o.paymentmethod) AS numberofpaymentmethod
+FROM customers AS c
+JOIN orders AS o
+ON c.customerid = o.customerid
+GROUP BY c.customerid
+HAVING COUNT(DISTINCT o.paymentmethod) >= 2;
+
+
+SELECT p.productname, COALESCE(SUM(o.quantity)) AS totalquantitysold, 
+CASE
+WHEN SUM(o.quantity) >= 20 THEN 'Best_Seller'
+WHEN SUM(o.quantity) BETWEEN 10 AND 19 THEN 'Moderate_Seller'
+WHEN SUM(o.quantity) < 10 THEN 'Low_Seller'
+ELSE 'Not_Yet_Sold' END AS 'Sales_Performance_Category'
+FROM products AS p
+JOIN order_items AS o
+ON p.productid = o.productid
+GROUP BY p.productid, p.productname;
+
+
+SELECT c.customername, c.city, SUM(oi.quantity * oi.unitprice) AS totalspending,
+DENSE_RANK() OVER(ORDER BY SUM(oi.quantity * oi.unitprice)) AS customer_rank
+FROM customers AS c
+LEFT JOIN orders AS o
+ON c.customerid = o.customerid
+JOIN order_items AS oi
+ON o.orderid = oi.orderid
+GROUP BY c.customerid, c.customername;
+
+
+
+SELECT ROUND(AVG(price), 2) AS category_average_price
+FROM products;
+
+SELECT p.productname, c.categoryname, p.price AS sellingprice
+FROM products AS p
+JOIN categories AS c
+ON p.categoryid = c.categoryid
+WHERE p.price > (SELECT ROUND(AVG(price), 2)
+FROM products)
+ORDER BY p.price DESC;
+
+
+SELECT s.suppliername, p.stockquantity, SUM(o.quantity) AS total_quantity_sold, 
+SUM(o.quantity * o.unitprice) AS total_revenue
+FROM suppliers AS s
+JOIN products AS p
+ON s.supplierid = p.supplierid
+JOIN order_items AS o
+ON p.productid = o.productid
+GROUP BY s.supplierid, p.productid
+ORDER BY SUM(quantity * unitprice) DESC
+LIMIT 5;
+
+
+SELECT c.customername, c.city, c.customerstatus, 
+COUNT(o.orderid) AS total_number_of_orders,
+SUM(oi.quantity) AS total_quantity_purchased, 
+SUM(oi.quantity * oi.unitprice) AS total_amount_spent,
+ROUND(AVG(o.orderid), 2) AS average_order_value,
+CASE 
+WHEN COUNT(o.orderid) >= 5 THEN 'Frequent_buyer'
+WHEN COUNT(o.orderid) BETWEEN 2 AND 4 THEN 'Regular_buyer'
+WHEN COUNT(o.orderid) = 1 THEN 'Occasional_buyer'
+ELSE 'No_purchase' END AS 'Purchase_Classification'
+FROM customers AS c
+JOIN orders AS o
+ON c.customerid = o.customerid
+JOIN order_items AS oi
+ON o.orderid = oi.orderid
+GROUP BY c.customerid, o.orderid, c.customername
+ORDER BY SUM(oi.quantity * oi.unitprice) DESC;
+
+
+
